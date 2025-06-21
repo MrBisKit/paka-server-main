@@ -8,6 +8,13 @@ locals {
     ADMIN_PASSWORD                  = var.ADMIN_PASSWORD
   }
   
+  # Zmienne środowiskowe dla Azure Container Registry
+  acr_env_vars = {
+    ACR_LOGIN_SERVER = azurerm_container_registry.container-registry.login_server
+    ACR_USERNAME     = azurerm_container_registry.container-registry.admin_username
+    ACR_PASSWORD     = azurerm_container_registry.container-registry.admin_password
+  }
+  
   # Łączymy podstawowe zmienne środowiskowe ze zmiennymi dla notification hub i ACR
   env_vars = merge(local.base_env_vars, try(local.notification_env_vars, {}), try(local.acr_env_vars, {}))
 }

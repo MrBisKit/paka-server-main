@@ -1,32 +1,31 @@
 # Azure DevOps configuration
 
+# Configure Azure DevOps provider
+
 # Provider for Azure DevOps
 provider "azuredevops" {
-  # Credentials and organization are taken from environment variables
-  # export AZDO_PERSONAL_ACCESS_TOKEN=<your PAT>
-  # export AZDO_ORG_SERVICE_URL=https://dev.azure.com/<your organization>
+  # Używamy jawnie podanych poświadczeń zamiast zmiennych środowiskowych
+  personal_access_token = var.azure_devops_pat
+  org_service_url       = "https://dev.azure.com/mbuchar461"
 }
 
-# Create Azure DevOps project
-resource "azuredevops_project" "paka_project" {
-  name               = "paka-delivery-app"
-  description        = "Delivery management application with courier notifications"
-  visibility         = "private"
-  version_control    = "Git"
-  work_item_template = "Agile"
+# Zmienna do przechowywania Azure DevOps PAT
+variable "azure_devops_pat" {
+  description = "Personal Access Token do Azure DevOps"
+  type        = string
+  sensitive   = true
+}
 
-  features = {
-    "testplans"    = "disabled"
-    "artifacts"    = "enabled"
-    "boards"       = "disabled"
-    "repositories" = "enabled"
-    "pipelines"    = "enabled"
-  }
+# Używamy istniejącego projektu Azure DevOps zamiast tworzyć nowy
+data "azuredevops_project" "paka_project" {
+  name = "Paka"
+  # Możemy użyć też ID projektu
+  # project_id = "7100cfc8-223f-4c4f-af43-e5866009fae6"
 }
 
 # Create service connection to Azure
 resource "azuredevops_serviceendpoint_azurerm" "azure_service_connection" {
-  project_id                = azuredevops_project.paka_project.id
+  project_id                = data.azuredevops_project.paka_project.id
   service_endpoint_name     = "Azure Subscription"
   description               = "Managed by Terraform"
   azurerm_spn_tenantid      = var.azure_tenant_id
@@ -36,18 +35,18 @@ resource "azuredevops_serviceendpoint_azurerm" "azure_service_connection" {
 
 # Create service connection to ACR
 resource "azuredevops_serviceendpoint_dockerregistry" "acr_service_connection" {
-  project_id            = azuredevops_project.paka_project.id
+  project_id            = data.azuredevops_project.paka_project.id
   service_endpoint_name = "Paka ACR"
   description           = "Managed by Terraform"
-  docker_registry       = azurerm_container_registry.paka_acr.login_server
-  docker_username       = azurerm_container_registry.paka_acr.admin_username
-  docker_password       = azurerm_container_registry.paka_acr.admin_password
+  docker_registry       = azurerm_container_registry.container-registry.login_server
+  docker_username       = azurerm_container_registry.container-registry.admin_username
+  docker_password       = azurerm_container_registry.container-registry.admin_password
   registry_type         = "Others"
 }
 
 # Create GitHub service connection
 resource "azuredevops_serviceendpoint_github" "github_connection" {
-  project_id            = azuredevops_project.paka_project.id
+  project_id            = data.azuredevops_project.paka_project.id
   service_endpoint_name = "GitHub Connection"
   description           = "Managed by Terraform"
   
@@ -59,7 +58,7 @@ resource "azuredevops_serviceendpoint_github" "github_connection" {
 
 # Create CI Pipeline
 resource "azuredevops_build_definition" "paka_ci_pipeline" {
-  project_id = azuredevops_project.paka_project.id
+  project_id = data.azuredevops_project.paka_project.id
   name       = "paka-build-pipeline"
   path       = "\\"
   
@@ -73,8 +72,10 @@ resource "azuredevops_build_definition" "paka_ci_pipeline" {
 }
 
 # Create CD Pipeline (Release pipeline)
+# Zakomentowane, ponieważ zasób azuredevops_release_definition nie jest obsługiwany przez dostawcę Microsoft Azure DevOps
+/*
 resource "azuredevops_release_definition" "paka_cd_pipeline" {
-  project_id      = azuredevops_project.paka_project.id
+  project_id      = data.azuredevops_project.paka_project.id
   name            = "paka-deploy-pipeline"
   
   artifacts {
@@ -97,13 +98,16 @@ resource "azuredevops_release_definition" "paka_cd_pipeline" {
         is_automated = true
       }
     }
+*/
 
+/*
     deployment_input {
       artifact_id = "BuildOutput"
       triggered = true
     }
   }
 }
+*/
 
 # Variables needed for configuration
 variable "azure_tenant_id" {

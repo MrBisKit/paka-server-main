@@ -23,15 +23,18 @@ data "azuredevops_project" "paka_project" {
   # project_id = "7100cfc8-223f-4c4f-af43-e5866009fae6"
 }
 
-# Create service connection to Azure
+# Create service connection to Azure RM
+# Zakomentowane z powodu braku uprawnień do tworzenia aplikacji w Microsoft Entra (Azure AD)
+/*
 resource "azuredevops_serviceendpoint_azurerm" "azure_service_connection" {
-  project_id                = data.azuredevops_project.paka_project.id
-  service_endpoint_name     = "Azure Subscription"
-  description               = "Managed by Terraform"
-  azurerm_spn_tenantid      = var.azure_tenant_id
+  project_id            = data.azuredevops_project.paka_project.id
+  service_endpoint_name = "Azure Subscription"
+  description           = "Managed by Terraform"
   azurerm_subscription_id   = var.azure_subscription_id
   azurerm_subscription_name = "Azure Subscription"
+  azurerm_spn_tenantid      = var.azure_tenant_id
 }
+*/
 
 # Create service connection to ACR
 resource "azuredevops_serviceendpoint_dockerregistry" "acr_service_connection" {

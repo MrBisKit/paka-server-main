@@ -1,12 +1,18 @@
+# Triggery CI - zostały wzmocnione dla lepszej integracji z GitHub
 trigger:
   branches:
     include:
       - main
+      - refs/heads/main  # Jawne odniesienie do pełnego identyfikatora brancha
   paths:
+    include:
+      - '*'              # Uwzględnia wszystkie pliki
     exclude:
       - README.md
       - .gitignore
       - terraform/*
+      - docs/*
+      - '*.md'           # Wyklucz wszystkie pliki markdown
 
 # Pipeline variables
 variables:

@@ -8,6 +8,7 @@ Nasza architektura DevOps opiera się na następujących komponentach Azure:
 2. **Azure DevOps** - zarządza pipeline'ami CI/CD
 3. **Azure Container Apps** - hostuje naszą aplikację w kontenerach
 4. **Terraform** - zapewnia infrastrukturę jako kod (IaC)
+5. **Azure Notification Hub** - obsługuje powiadomienia push dla kurierów
 
 ## Pipeline CI/CD
 
@@ -31,13 +32,24 @@ Pipeline CI/CD składa się z następujących etapów:
 
 Wszystkie zasoby są zarządzane przez Terraform:
 
-- `container_registry.tf` - konfiguracja Azure Container Registry
+- `main.tf` - konfiguracja dostawców i Azure Container Registry
 - `container_app.tf` - konfiguracja Azure Container Apps
 - `notification_hub.tf` - konfiguracja Azure Notification Hub
-- `azure_devops.tf` - konfiguracja Azure DevOps
+- `azure_devops.tf` - konfiguracja Azure DevOps (pipeline CI i połączenia serwisowe)
 - `env_variables.tf` - zmienne środowiskowe dla aplikacji
 
 ## Jak korzystać
+
+### Wymagania wstępne
+
+1. **Azure DevOps PAT** - token dostępu osobistego z uprawnieniami do:
+   - Build (Read & Execute)
+   - Service Connections (Read & Query)
+   - Code (Read & Write)
+
+2. **GitHub PAT** - token dostępu osobistego z uprawnieniami do repozytorium
+
+3. **Plik azure-pipelines.yml** - plik konfiguracyjny pipeline'u w głównym katalogu repozytorium
 
 ### Inicjalizacja infrastruktury
 
@@ -55,6 +67,7 @@ terraform apply -var-file="secrets.tfvars"
 # Zmienne Azure DevOps
 azure_tenant_id      = "your-tenant-id"
 azure_subscription_id = "your-subscription-id"
+azure_devops_pat      = "your-azure-devops-pat"
 github_pat           = "your-github-pat"
 github_repo_id       = "your-username/your-repo"
 azure_devops_user_id = "your-devops-user-id"
@@ -64,6 +77,15 @@ JWT_SECRET           = "your-jwt-secret"
 ADMIN_LOGIN          = "admin"
 ADMIN_PASSWORD       = "your-admin-password"
 ```
+
+### Ręczna konfiguracja Azure DevOps
+
+Ze względu na ograniczenia uprawnień, należy ręcznie skonfigurować:
+
+1. **Azure Service Connection** - połączenie do subskrypcji Azure
+   - W projekcie Azure DevOps: Project Settings > Service connections > New service connection
+   - Wybierz Azure Resource Manager i skonfiguruj używając Workload Identity Federation
+   - Ustaw nazwę połączenia na "Azure Subscription"
 
 ### Uruchomienie pipeline'u
 

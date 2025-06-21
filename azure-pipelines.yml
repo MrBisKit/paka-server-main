@@ -22,9 +22,9 @@ variables:
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
   
-  # Azure subscription  
-  azureSubscription: 'Azure Subscription'
-  resourceGroupName: 'paka-resource-group'
+  # Azure subscription - zmienione na ACR, który prawdopodobnie już istnieje
+  azureSubscription: 'Paka ACR'
+  resourceGroupName: 'paka-app'
 
 stages:
 - stage: Build
@@ -67,85 +67,87 @@ stages:
         echo "Running tests would go here"
       displayName: 'Run Tests'
 
-- stage: Deploy
-  displayName: 'Deploy to Azure Container App'
-  dependsOn: Build
-  condition: succeeded()
-  jobs:
-  - job: Deploy
-    displayName: 'Deploy Container App'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - task: AzureCLI@2
-      displayName: 'Deploy to Container App'
-      inputs:
-        azureSubscription: $(azureSubscription)
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          az extension add --name containerapp --upgrade
-          
-          # Update the container app with the new image
-          az containerapp update \
-            --name paka-app \
-            --resource-group $(resourceGroupName) \
-            --image $(containerRegistry)/paka-server:$(tag) \
-            --registry-server $(containerRegistry) \
-            --registry-username $(ACR_ADMIN_USERNAME) \
-            --registry-password $(ACR_ADMIN_PASSWORD)
-          
-          echo "Container App updated successfully!"
+# Etap wdrażania tymczasowo wyłączony - wymaga ręcznej konfiguracji Service Connection
+# - stage: Deploy
+#   displayName: 'Deploy to Azure Container App'
+#   dependsOn: Build
+#   condition: succeeded()
+#  jobs:
+#  - job: Deploy
+#    displayName: 'Deploy Container App'
+#    pool:
+#      vmImage: 'ubuntu-latest'
+#    steps:
+#    - task: AzureCLI@2
+#      displayName: 'Deploy to Container App'
+#      inputs:
+#        azureSubscription: $(azureSubscription)
+#        scriptType: 'bash'
+#        scriptLocation: 'inlineScript'
+#        inlineScript: |
+#          az extension add --name containerapp --upgrade
+#          
+#          # Update the container app with the new image
+#          az containerapp update \
+#            --name paka-app \
+#            --resource-group $(resourceGroupName) \
+#            --image $(containerRegistry)/paka-server:$(tag) \
+#            --registry-server $(containerRegistry) \
+#            --registry-username $(ACR_ADMIN_USERNAME) \
+#            --registry-password $(ACR_ADMIN_PASSWORD)
+#          
+#          echo "Container App updated successfully!"
+#
+#    - task: AzureCLI@2
+#      displayName: 'Run Database Migrations'
+#      inputs:
+#        azureSubscription: $(azureSubscription)
+#        scriptType: 'bash'
+#        scriptLocation: 'inlineScript'
+#        inlineScript: |
+#          # Create a temporary container to run migrations
+#          az containerapp job create \
+#            --name migration-job-$(tag) \
+#            --resource-group $(resourceGroupName) \
+#            --image $(containerRegistry)/paka-server:$(tag) \
+#            --command "bunx" "prisma" "migrate" "deploy" \
+#            --registry-server $(containerRegistry) \
+#            --registry-username $(ACR_ADMIN_USERNAME) \
+#            --registry-password $(ACR_ADMIN_PASSWORD) \
+#            --cpu 0.5 --memory 1.0Gi \
+#            --min-replicas 1 --max-replicas 1 \
+#            --execution-type Once
+#            
+#          echo "Database migration job created successfully!"
 
-    - task: AzureCLI@2
-      displayName: 'Run Database Migrations'
-      inputs:
-        azureSubscription: $(azureSubscription)
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          # Create a temporary container to run migrations
-          az containerapp job create \
-            --name migration-job-$(tag) \
-            --resource-group $(resourceGroupName) \
-            --image $(containerRegistry)/paka-server:$(tag) \
-            --command "bunx" "prisma" "migrate" "deploy" \
-            --registry-server $(containerRegistry) \
-            --registry-username $(ACR_ADMIN_USERNAME) \
-            --registry-password $(ACR_ADMIN_PASSWORD) \
-            --cpu 0.5 --memory 1.0Gi \
-            --min-replicas 1 --max-replicas 1 \
-            --execution-type Once
-            
-          echo "Database migration job created successfully!"
-
-- stage: Verify
-  displayName: 'Verify Deployment'
-  dependsOn: Deploy
-  condition: succeeded()
-  jobs:
-  - job: HealthCheck
-    displayName: 'Run Health Checks'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - task: AzureCLI@2
-      displayName: 'Verify Container App Health'
-      inputs:
-        azureSubscription: $(azureSubscription)
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          # Get the FQDN of the Container App
-          FQDN=$(az containerapp show --name paka-app --resource-group $(resourceGroupName) --query properties.configuration.ingress.fqdn -o tsv)
-          
-          # Test the health endpoint
-          echo "Testing health endpoint: https://$FQDN/api/health"
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://$FQDN/api/health)
-          
-          if [ "$STATUS_CODE" == "200" ]; then
-            echo "Health check passed!"
-          else
-            echo "Health check failed with status code: $STATUS_CODE"
-            exit 1
-          fi
+# Etap weryfikacji tymczasowo wyłączony - wymaga działającego etapu Deploy
+# - stage: Verify
+#   displayName: 'Verify Deployment'
+#   dependsOn: Deploy
+#   condition: succeeded()
+#  jobs:
+#  - job: HealthCheck
+#    displayName: 'Run Health Checks'
+#    pool:
+#      vmImage: 'ubuntu-latest'
+#    steps:
+#    - task: AzureCLI@2
+#      displayName: 'Verify Container App Health'
+#      inputs:
+#        azureSubscription: $(azureSubscription)
+#        scriptType: 'bash'
+#        scriptLocation: 'inlineScript'
+#        inlineScript: |
+#          # Get the FQDN of the Container App
+#          FQDN=$(az containerapp show --name paka-app --resource-group $(resourceGroupName) --query properties.configuration.ingress.fqdn -o tsv)
+#          
+#          # Test the health endpoint
+#          echo "Testing health endpoint: https://$FQDN/api/health"
+#          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://$FQDN/api/health)
+#          
+#          if [ "$STATUS_CODE" == "200" ]; then
+#            echo "Health check passed!"
+#          else
+#            echo "Health check failed with status code: $STATUS_CODE"
+#            exit 1
+#          fi

@@ -33,7 +33,7 @@ stages:
   - job: BuildAndPush
     displayName: 'Build and Push Docker Image'
     pool:
-      vmImage: 'ubuntu-latest'
+      name: Default # Użyj puli agentów self-hosted
     steps:
     - task: Docker@2
       displayName: 'Build Docker Image'
